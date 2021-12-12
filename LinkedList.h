@@ -144,7 +144,6 @@ public:
     using pointer = typename std::allocator_traits<Allocator>::pointer;
     using const_pointer = typename std::allocator_traits<Allocator>::const_pointer;
 
-
 public:
 
     using iterator = detail::ListIterator<value_type, Allocator>;
@@ -152,28 +151,20 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-
 public:
-    LinkedList(): size_(0ull){
-        base_.next_ = &base_;
-        base_.prev_ = &base_;
-        base_.object_ = nullptr;
-    }
 
+    LinkedList();
     LinkedList(const LinkedList& other);
     LinkedList(LinkedList&& other) noexcept;
-
     LinkedList(size_type count, const T& value);
     explicit LinkedList(size_type count);
-
     template<typename InputIt>
     LinkedList(InputIt first, InputIt last);
-
     LinkedList(std::initializer_list<T> init);
-
     ~LinkedList();
 
 public:
+
     LinkedList& operator=(const LinkedList& other);
     LinkedList& operator=(LinkedList&& other) noexcept;
     LinkedList& operator=(std::initializer_list<T> ilist);
@@ -184,72 +175,40 @@ public:
     void assign(std::initializer_list<T> ilist);
 
 public:
+
     reference front();
     const_reference front() const;
-
     reference back();
     const_reference back() const;
 
 public:
 
-    iterator begin() noexcept{
-        return iterator(base_.next_);
-    }
+    iterator begin() noexcept;
+    const_iterator begin() const noexcept;
+    const_iterator cbegin() const noexcept;
+    iterator end() noexcept;
+    const_iterator end() const noexcept;
+    const_iterator cend() const noexcept;
 
-    const_iterator begin() const noexcept{
-        return const_iterator(base_.next_);
-    }
-    const_iterator cbegin() const noexcept{
-        return const_iterator(base_.next_);
-    }
-
-    iterator end() noexcept{
-        return iterator(&base_);
-    }
-
-
-    const_iterator end() const noexcept{
-        return const_iterator(&base_);
-    }
-    const_iterator cend() const noexcept{
-        return const_iterator(&base_);
-    }
+    reverse_iterator rbegin() noexcept;
+    const_reverse_iterator rbegin() const noexcept;
+    const_reverse_iterator crbegin() const noexcept;
+    reverse_iterator rend() noexcept;
+    const_reverse_iterator rend() const noexcept;
+    const_reverse_iterator crend() const noexcept;
 
 public:
-    reverse_iterator rbegin() noexcept{
-        return reverse_iterator(iterator(&base_));
-    }
 
-    const_reverse_iterator rbegin() const noexcept{
-        return const_reverse_iterator(const_iterator(&base_));
-    }
-
-    const_reverse_iterator crbegin() const noexcept{
-        return const_reverse_iterator(const_iterator(&base_));
-    }
-
-    reverse_iterator rend() noexcept{
-        return reverse_iterator(iterator(base_.next_));
-    }
-
-    const_reverse_iterator rend() const noexcept{
-        return const_reverse_iterator(const_iterator(base_.next_));
-    }
-
-    const_reverse_iterator crend() const noexcept{
-        return const_reverse_iterator(const_iterator(base_.next_));
-    }
-
-public:
     [[nodiscard]] size_type size() const noexcept;
     [[nodiscard]] bool empty() const;
 
-
 private:
+
     template<typename U>
     iterator insert_(const_iterator pos, U&& value);
 
 public:
+
     iterator insert(const_iterator pos, const T& value);
     iterator insert(const_iterator pos, T&& value);
     iterator insert(const_iterator pos, size_type count, const T& value);
@@ -259,40 +218,42 @@ public:
 
     void push_front(const T& value);
     void push_front(T&& value);
-
     void push_back(const T& value);
     void push_back(T&& value);
 
 public:
+
     iterator erase(const_iterator pos);
     iterator erase(const_iterator first, const_iterator last);
 
     void pop_back();
     void pop_front();
 
+private:
+
+    template<typename Func, typename ...Args>
+    size_type remove_some_elements_(Func, Args&&...);
+
 public:
-    void sort();
-    template<typename Compare>
-    void sort(Compare comp);
 
     size_type unique();
     template<typename BinaryPredicate>
     size_type unique(BinaryPredicate p);
-
-    void reverse() noexcept;
-
     size_type remove(const T& value);
     template<typename UnaryPredicate>
     size_type remove_if(UnaryPredicate p);
 
 public:
-    void clear() noexcept;
 
+    void clear() noexcept;
     void resize(size_type count, const value_type& value);
     void resize(size_type count);
-
     void swap(LinkedList& other) noexcept;
+    void sort();
+    template<typename Compare>
+    void sort(Compare comp);
 
+    void reverse() noexcept;
 
 private:
 
@@ -302,6 +263,7 @@ private:
 };
 
 
+/* insert by universal reference */
 template<typename T, typename Allocator>
 template<typename U>
 typename LinkedList<T, Allocator>::iterator
@@ -327,7 +289,7 @@ LinkedList<T, Allocator>::insert_(LinkedList::const_iterator pos, U &&value) {
 }
 
 
-
+/* insert methods */
 template<typename T, typename Allocator>
 typename LinkedList<T, Allocator>::iterator
 LinkedList<T, Allocator>::insert(LinkedList::const_iterator pos, const T &value) {
@@ -412,6 +374,7 @@ void LinkedList<T, Allocator>::push_back(T &&value) {
 }
 
 
+/* erase methods */
 template<typename T, typename Allocator>
 typename LinkedList<T, Allocator>::iterator
 LinkedList<T, Allocator>::erase(LinkedList::const_iterator pos) {
@@ -422,8 +385,8 @@ LinkedList<T, Allocator>::erase(LinkedList::const_iterator pos) {
     std::allocator_traits<Allocator>::destroy(alloc, pos.ptr_->object_);
     std::allocator_traits<Allocator>::deallocate(alloc, pos.ptr_->object_, 1ull);
 
-    pos.ptr_->prev_ = pos.ptr_->next_;
-    pos.ptr_->next_ = pos.ptr_->prev_;
+    pos.ptr_->prev_->next_ = pos.ptr_->next_;
+    pos.ptr_->next_->prev_ = pos.ptr_->prev_;
     auto ret_ptr = pos.ptr_->next_;
     std::allocator_traits<decltype(other_alloc)>::deallocate(other_alloc, pos.ptr_, 1ull);
     --size_;
@@ -448,16 +411,24 @@ LinkedList<T, Allocator>::erase(LinkedList::const_iterator first, LinkedList::co
 template<typename T, typename Allocator>
 void LinkedList<T, Allocator>::pop_back() {
 
-    erase(cend());
+    erase(--cend());
 }
 
 
 template<typename T, typename Allocator>
 void LinkedList<T, Allocator>::pop_front() {
 
-    erase(cend());
+    erase(cbegin());
 }
 
+
+/* Constructors and assignment operators */
+template<typename T, typename Allocator>
+LinkedList<T, Allocator>::LinkedList():size_(0ull){
+    base_.next_ = &base_;
+    base_.prev_ = &base_;
+    base_.object_ = nullptr;
+}
 
 template<typename T, typename Allocator>
 LinkedList<T, Allocator>::~LinkedList() {
@@ -465,13 +436,11 @@ LinkedList<T, Allocator>::~LinkedList() {
     clear();
 }
 
-
 template<typename T, typename Allocator>
 LinkedList<T, Allocator>::LinkedList(const LinkedList &other): LinkedList(){
 
     insert(cend(), other.cbegin(), other.cend());
 }
-
 
 template<typename T, typename Allocator>
 LinkedList<T, Allocator>::LinkedList(LinkedList &&other) noexcept: LinkedList() {
@@ -479,18 +448,14 @@ LinkedList<T, Allocator>::LinkedList(LinkedList &&other) noexcept: LinkedList() 
     std::swap(*this, other);
 }
 
-
 template<typename T, typename Allocator>
 LinkedList<T, Allocator>::LinkedList(LinkedList::size_type count, const T &value): LinkedList() {
 
     insert(cend(), count, value);
 }
 
-
 template<typename T, typename Allocator>
-LinkedList<T, Allocator>::LinkedList(LinkedList::size_type count): LinkedList(count, value_type()) {
-}
-
+LinkedList<T, Allocator>::LinkedList(LinkedList::size_type count): LinkedList(count, value_type()) {}
 
 template<typename T, typename Allocator>
 template<typename InputIt>
@@ -498,7 +463,6 @@ LinkedList<T, Allocator>::LinkedList(InputIt first, InputIt last): LinkedList() 
 
     insert(cend(), first, last);
 }
-
 
 template<typename T, typename Allocator>
 LinkedList<T, Allocator>::LinkedList(std::initializer_list<T> init): LinkedList() {
@@ -541,55 +505,7 @@ LinkedList<T, Allocator> &LinkedList<T, Allocator>::operator=(std::initializer_l
 }
 
 
-template<typename T, typename Allocator>
-typename LinkedList<T, Allocator>::reference LinkedList<T, Allocator>::front() {
-
-    return *begin();
-}
-
-
-template<typename T, typename Allocator>
-typename LinkedList<T, Allocator>::const_reference LinkedList<T, Allocator>::front() const {
-
-    return *cbegin();
-}
-
-
-template<typename T, typename Allocator>
-typename LinkedList<T, Allocator>::reference LinkedList<T, Allocator>::back() {
-
-    return *base_.prev_->object_;
-}
-
-
-template<typename T, typename Allocator>
-typename LinkedList<T, Allocator>::const_reference LinkedList<T, Allocator>::back() const {
-
-    return *base_.prev_->object_;
-}
-
-
-template<typename T, typename Allocator>
-typename LinkedList<T, Allocator>::size_type LinkedList<T, Allocator>::size() const noexcept {
-
-    return size_;
-}
-
-
-template<typename T, typename Allocator>
-bool LinkedList<T, Allocator>::empty() const {
-
-    return size_ == 0ull;
-}
-
-
-template<typename T, typename Allocator>
-void LinkedList<T, Allocator>::clear() noexcept {
-
-    erase(cbegin(), cend());
-}
-
-
+/* assign methods */
 template<typename T, typename Allocator>
 void LinkedList<T, Allocator>::assign(LinkedList::size_type count, const T &value) {
 
@@ -633,6 +549,50 @@ void LinkedList<T, Allocator>::assign(std::initializer_list<T> ilist) {
 }
 
 
+/* front-back methods */
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::reference LinkedList<T, Allocator>::front() {
+
+    return *begin();
+}
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::const_reference LinkedList<T, Allocator>::front() const {
+
+    return *cbegin();
+}
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::reference LinkedList<T, Allocator>::back() {
+
+    return *base_.prev_->object_;
+}
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::const_reference LinkedList<T, Allocator>::back() const {
+
+    return *base_.prev_->object_;
+}
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::size_type LinkedList<T, Allocator>::size() const noexcept {
+
+    return size_;
+}
+
+template<typename T, typename Allocator>
+bool LinkedList<T, Allocator>::empty() const {
+
+    return size_ == 0ull;
+}
+
+template<typename T, typename Allocator>
+void LinkedList<T, Allocator>::clear() noexcept {
+
+    erase(cbegin(), cend());
+}
+
+
 template<typename T, typename Allocator>
 void LinkedList<T, Allocator>::resize(LinkedList::size_type count, const value_type &value) {
 
@@ -662,5 +622,161 @@ void LinkedList<T, Allocator>::swap(LinkedList &other) noexcept {
 }
 
 
-#endif //LINKEDLIST_LINKEDLIST_H
+template<typename T, typename Allocator>
+void LinkedList<T, Allocator>::reverse() noexcept {
 
+    for(auto it = begin(); it!=end(); --it){
+
+        std::swap(it.ptr_->prev_, it.ptr_->next_);
+    }
+
+    std::swap(base_.prev_, base_.next_);
+}
+
+
+/* remove methods */
+template<typename T, typename Allocator>
+template<typename Func, typename... Args>
+typename LinkedList<T, Allocator>::size_type
+LinkedList<T, Allocator>::remove_some_elements_(Func f, Args&&... arg) {
+
+    auto it = f(begin(), end(), std::forward<Args>(arg)...);
+    size_type ret = std::distance(it, end());
+    erase(it, end());
+    return ret;
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::size_type
+LinkedList<T, Allocator>::remove(const T &value) {
+
+    return remove_some_elements_(std::remove<iterator, const_value_type>, value);
+}
+
+
+template<typename T, typename Allocator>
+template<typename UnaryPredicate>
+typename LinkedList<T, Allocator>::size_type
+LinkedList<T, Allocator>::remove_if(UnaryPredicate p) {
+
+    return remove_some_elements_(std::remove_if<iterator, UnaryPredicate>, p);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::size_type
+LinkedList<T, Allocator>::unique() {
+
+    return remove_some_elements_(std::unique<iterator>);
+}
+
+
+template<typename T, typename Allocator>
+template<typename BinaryPredicate>
+typename LinkedList<T, Allocator>::size_type
+LinkedList<T, Allocator>::unique(BinaryPredicate p) {
+
+    return remove_some_elements_(std::unique<iterator, BinaryPredicate>, p);
+}
+
+
+/* iterators */
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        iterator LinkedList<T, Allocator>::begin() noexcept {
+
+    return iterator(base_.next_);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_iterator LinkedList<T, Allocator>::begin() const noexcept {
+
+    return const_iterator(base_.next_);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_iterator LinkedList<T, Allocator>::cbegin() const noexcept {
+
+    return const_iterator(base_.next_);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        iterator LinkedList<T, Allocator>::end() noexcept {
+
+    return iterator(&base_);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_iterator LinkedList<T, Allocator>::end() const noexcept {
+
+    return const_iterator(&base_);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_iterator LinkedList<T, Allocator>::cend() const noexcept {
+
+    return const_iterator(&base_);
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        reverse_iterator LinkedList<T, Allocator>::rbegin() noexcept {
+
+    return reverse_iterator(iterator(&base_));
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_reverse_iterator LinkedList<T, Allocator>::rbegin() const noexcept {
+
+    return const_reverse_iterator(const_iterator(&base_));
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_reverse_iterator LinkedList<T, Allocator>::crbegin() const noexcept {
+
+    return const_reverse_iterator(const_iterator(&base_));
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        reverse_iterator LinkedList<T, Allocator>::rend() noexcept {
+
+    return reverse_iterator(iterator(base_.next_));
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_reverse_iterator LinkedList<T, Allocator>::rend() const noexcept {
+
+    return const_reverse_iterator(const_iterator(base_.next_));
+}
+
+
+template<typename T, typename Allocator>
+typename LinkedList<T, Allocator>::
+        const_reverse_iterator LinkedList<T, Allocator>::crend() const noexcept {
+
+    return const_reverse_iterator(const_iterator(base_.next_));
+}
+
+
+#endif //LINKEDLIST_LINKEDLIST_H
